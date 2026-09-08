@@ -1,4 +1,4 @@
-"""PRE-REGISTERED design for the cross-lineage judge panel.
+r"""PRE-REGISTERED design for the cross-lineage judge panel.
 Written and frozen BEFORE any label from a non-OpenAI judge exists.
 
 Why this exists. Every judge measurement in this project so far used one pretraining lineage

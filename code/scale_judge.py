@@ -81,11 +81,27 @@ def build_prompts(panel_csv, abstracts_jsonl, topics_json, prompt_txt, criteria_
     the semantics of a run."""
     import csv
 
-    for path in (panel_csv, abstracts_jsonl, topics_json, prompt_txt):
+    # The abstracts file is the one input the repository does NOT ship - PubMed text is fetched,
+    # not redistributed - so a missing abstracts file means the fetch step has not been run, and
+    # that deserves its own message rather than the generic one.
+    if not os.path.exists(abstracts_jsonl):
+        raise SystemExit(
+            f"missing input: {abstracts_jsonl}\n"
+            f"  This file is NOT shipped in the repository. PubMed abstract text is fetched\n"
+            f"  rather than redistributed, so it has to be built once before any judging:\n"
+            f"\n"
+            f"      python code/fetch_abstracts.py --pmids data/pmids_panel.txt "
+            f"--out {abstracts_jsonl}\n"
+            f"\n"
+            f"  In the notebook that is the cell above the smoke test. It takes about a minute\n"
+            f"  for 2,017 records and is cached for the rest of the session.")
+    for path in (panel_csv, topics_json, prompt_txt):
         if not os.path.exists(path):
             raise SystemExit(f"missing input: {path}\n"
-                             f"  run from the repository root, or pass explicit --panel "
-                             f"--abstracts --topics --prompt paths")
+                             f"  These ship with the repository, so this usually means the "
+                             f"working directory is wrong.\n"
+                             f"  Run from the repository root (cwd is {os.getcwd()}), or pass "
+                             f"explicit --panel --topics --prompt paths.")
     if condition == "C" and not os.path.exists(criteria_txt):
         raise SystemExit(f"condition C needs the criteria block but {criteria_txt} is missing")
 

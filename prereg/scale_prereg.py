@@ -1,4 +1,4 @@
-"""PRE-REGISTERED open-weight scale ladder. Written before any open-weight label existed.
+r"""PRE-REGISTERED open-weight scale ladder. Written before any open-weight label existed.
 
 WHY THIS AXIS AND NOT THE ONE WE ALREADY RAN. The project measured a capability axis across
 Haiku 4.5 -> Sonnet 4.5 -> Opus 4.5 and it came out NON-MONOTONE, which invalidated a projection
