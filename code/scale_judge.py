@@ -43,7 +43,7 @@ for _p in (os.path.join(_ROOT, "prereg"), _HERE, _ROOT):
     if _p not in sys.path:
         sys.path.append(_p)
 try:
-    from scale_prereg import BINARISE_AT, MAX_TOKENS, SEED, TEMPERATURE, TOP_P
+    from scale_prereg import BINARISE_AT, MAX_TOKENS, N_PAIRS, SEED, TEMPERATURE, TOP_P
 except ModuleNotFoundError as _exc:
     raise SystemExit(
         f"cannot import the pre-registration: {_exc}\n"
@@ -191,6 +191,8 @@ def main():
     ap.add_argument("--criteria", default="data/crit_block_C.txt")
     ap.add_argument("--outdir", default="labels")
     ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--force", action="store_true",
+                    help="re-judge an arm whose label file is already complete")
     ap.add_argument("--max-model-len", type=int, default=4096)
     ap.add_argument("--gpu-memory-utilization", type=float, default=0.90)
     args = ap.parse_args()
@@ -200,6 +202,21 @@ def main():
     os.makedirs(args.outdir, exist_ok=True)
     out_path = os.path.join(args.outdir, f"scale_labels_{tag}.jsonl")
     man_path = os.path.join(args.outdir, f"scale_manifest_{tag}.json")
+
+    # Resume support. A 10-arm run downloads about 110 GB and takes hours; a session that dies
+    # part-way must not restart from zero. An existing label file with the full expected row
+    # count is treated as done. A SHORT file is NOT trusted - it is reported and left alone so
+    # the operator decides, because silently topping up a partial file would mix two runs.
+    if os.path.exists(out_path) and not args.force:
+        have = sum(1 for ln in open(out_path) if ln.strip())
+        expected = args.limit or N_PAIRS
+        if have >= expected:
+            print(f"[{tag}] already complete: {have} rows in {out_path} - skipping. "
+                  f"Pass --force to re-judge.", flush=True)
+            return
+        print(f"[{tag}] existing file has {have} rows, expected {expected}. NOT topping it up - "
+              f"delete it and re-run, or pass --force to overwrite.", flush=True)
+        raise SystemExit(1)
 
     rows, missing = build_prompts(args.panel, args.abstracts, args.topics, args.prompt,
                                  args.criteria, args.condition, args.limit)

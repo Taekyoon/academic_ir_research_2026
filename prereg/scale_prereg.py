@@ -265,3 +265,43 @@ N_PAIRS = 2025
 #   - DOWNLOAD VOLUME is about 110 GB of weights on a 40 GB device and 222 GB on 80 GB. This is
 #     an operational cost, not a scientific one, but a session that dies part-way must report
 #     which arms completed rather than presenting a partial ladder as the registered design.
+
+# ============================================================================================
+# AMENDMENT 4 - THE DEVICE CEILING IS FIXED AT A100 40 GB. Written before any Llama or Gemma
+# label existed, on the user's statement that only a 40 GB A100 is available.
+#
+# This is a DECLARED SCOPE, not a failure to report later. Qwen3-32B (61.0 GB in bf16) and
+# gemma-3-27b-it (51.1 GB) are out of scope for this study and are absent from every table and
+# every fit. They are not "not attempted" in the sense that 14B was in run 1 - that was a
+# discovery mid-run; this is a boundary set in advance. Llama-3.3-70B (131.4 GB) was already
+# out of reach on any single A100.
+#
+# THE LADDERS ARE THEREFORE FINAL AT:
+#     qwen3   1.7B  4B  8B  14B          4 points, span 7.3x
+#     llama   1B    3B  8B               3 points, span 6.5x
+#     gemma   1B    4B  12B              3 points, span 12.2x
+# 10 arms x 2 conditions x 2,025 pairs = 40,500 judgements, about 110 GB of weights.
+#
+# CONSEQUENCES that must travel with every verdict, stated now:
+#   - THE LADDERS TOP OUT AT DIFFERENT SIZES (14B, 8B, 12B). H-X1 compares slopes, which does
+#     not require matched endpoints, but a slope fitted over 1-14B and one fitted over 1-8B are
+#     not equally constrained at the top, and llama's is the least constrained. The point count
+#     and range are reported beside every slope.
+#   - H-X2's ~8B BAND HAS TWO MEMBERS (Qwen3-8B, Llama-3.1-8B). gemma has no 8B release and
+#     gemma-3-12b-it is NOT substituted into that band. The ~4B band has three
+#     (Qwen3-4B, Llama-3.2-3B, gemma-3-4b-it).
+#   - NO CLAIM IS MADE ABOUT 27B-32B SCALE. If a reviewer asks whether the trend continues, the
+#     answer is that this study does not reach that range, not that the trend flattens there.
+#     Extrapolating a 4-point fit past its largest point would be the same error as the
+#     withdrawn projection in scaling_threat_ko.md.
+#
+# OPERATIONAL, and registered because a partial run must not be presented as the design:
+#   - RESUMABILITY. An arm whose label file already exists with the full 2,025 rows is skipped
+#     rather than re-judged, so a session that dies part-way resumes instead of restarting.
+#     Skipped-as-complete and freshly-judged arms are distinguished in the manifest set.
+#   - DISK. About 110 GB of weights will not co-exist with a Colab disk of typical size, so each
+#     arm's weights are purged from the hub cache after its labels are written. The purge is
+#     conditional on the labels existing, so a failed arm keeps its download for a retry.
+#   - A SESSION THAT ENDS WITH FEWER THAN 10 ARMS reports exactly which arms completed, and the
+#     per-family point counts are recomputed from what completed. A family reduced below three
+#     points is reported as "not testable" for H-S1, as already registered in amendment 3.
