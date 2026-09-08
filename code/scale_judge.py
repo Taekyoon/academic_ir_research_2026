@@ -201,8 +201,13 @@ def main():
             f"  Per the pre-registration this arm is NOT RUN and is reported as not attempted. "
             f"Do NOT quantise it to make it fit - that would mix precision with scale.")
 
-    # trust_remote_code is deliberately NOT set: every arm here is natively supported by
-    # transformers, and recent versions warn that the flag is ignored for Auto classes anyway.
+    # trust_remote_code is deliberately NOT set. Two separate reasons, kept distinct:
+    #   1. None of the arms in ARMS needs it - all are natively supported by transformers.
+    #   2. Passing it here did nothing anyway. transformers reported, verbatim: "The argument
+    #      `trust_remote_code` is to be used with Auto classes. It has no effect here and is
+    #      ignored." That is, the flag IS meant for Auto classes and would take effect there;
+    #      it has no effect at THIS call site. (An earlier version of this comment inverted
+    #      that warning, claiming the flag is ignored for Auto classes. It is not.)
     llm = LLM(model=repo, dtype=args.dtype, seed=SEED, max_model_len=args.max_model_len,
               gpu_memory_utilization=args.gpu_memory_utilization)
 
