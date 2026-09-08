@@ -305,3 +305,76 @@ N_PAIRS = 2025
 #   - A SESSION THAT ENDS WITH FEWER THAN 10 ARMS reports exactly which arms completed, and the
 #     per-family point counts are recomputed from what completed. A family reduced below three
 #     points is reported as "not testable" for H-S1, as already registered in amendment 3.
+
+# ============================================================================================
+# AMENDMENT 5 - PERMISSIVE GUIDED DECODING BECOMES THE PRIMARY BASIS FOR EVERY OPEN ARM.
+# Written before any guided label existed. Labels that DID exist at writing time: the 16 free
+# arm-conditions of run 2 (scale2_results_ko.md). No guided label of any arm existed.
+#
+# WHY. Run 2's free-generation basis is not a common harness. Four arm-conditions parsed at 1.00
+# and four parsed at 0.05-0.79, so the comparison set was decided by output-format compliance
+# rather than by judging behaviour: H-S1 became testable for one family only, and H-X1 and H-X2
+# could not be evaluated at all. Making the harness uniform is the fix, and R2 already named
+# guided decoding as the remedy - this amendment applies it to EVERY open arm rather than only
+# to the ones that failed, because a remedy applied selectively is itself a selection effect.
+#
+# WHICH GUIDED. Permissive: [\s\S]*## final score: [0-3]. Constrained decoding only permits the
+# end-of-sequence token in an accepting state, so a model cannot stop before emitting a valid
+# score line, but it may reason first. This changes the output CONTRACT and nothing else.
+#
+# The STRICT variant (score line only) is NOT the primary remedy and this is a substantive
+# choice, not a preference. llama-3.1-8b emits a median of 235 reasoning tokens before its
+# answer; forbidding prose deletes that computation, so strict-guided labels are labels of a
+# different procedure and are not comparable to a free run of the same model. Strict is retained
+# as --guided-strict for a declared secondary probe on one arm, reported separately, never
+# pooled with permissive labels.
+#
+# THE PARSER IS NOT TOUCHED. STRICT stays r"##\s*final\s*score\s*:?\s*([0-3])". Changing the
+# parser at the same time as the harness would make the two effects inseparable.
+#
+# --------------------------------------------------------------------------------------------
+# H-H1  HOW MUCH DOES THE HARNESS MOVE THE LABELS?  (new, and it gates everything else)
+#
+# Four arm-conditions passed free generation at >= 0.95: qwen3-1.7b A and C, qwen3-8b A and C,
+# qwen3-14b A and C, gemma-3-12b-it A and C. Every one of them is ALSO run guided, giving paired
+# free/guided labels on identical pairs. On those pairs:
+#     exact-grade agreement >= 0.95 AND |delta fp| <= 0.02 in every pair
+#         -> "HARNESS EFFECT BOUNDED": the guided ladder may be compared to the free-generation
+#            proprietary arms, with the measured agreement quoted as the bound.
+#     agreement < 0.90 in any pair, or |delta fp| > 0.05 in any pair
+#         -> "HARNESS EFFECT MATERIAL": every open-versus-proprietary comparison in the paper is
+#            declared harness-confounded and the open arms are compared only to each other.
+# Between those, report both numbers and make no comparison claim either way.
+#
+# This is registered as a GATE rather than a curiosity because the paper's open-weight claim is
+# an open-versus-proprietary comparison, and that comparison survives only if H-H1 is bounded.
+#
+# THE CONFOUND THAT CANNOT BE REMOVED, stated now. The proprietary arms were judged through
+# APIs, and no API offers regex-constrained decoding, so they cannot be re-run guided. Uniformity
+# is therefore achievable WITHIN the open arms and not across the whole study. All-guided does
+# not eliminate the harness confound; it relocates it to the open/proprietary boundary and makes
+# it measurable there, which is why H-H1 exists.
+#
+# --------------------------------------------------------------------------------------------
+# WHAT THIS CHANGES IN THE EXISTING HYPOTHESES
+#
+#   - H-S1, H-S2, H-X1, H-X2 are evaluated on the GUIDED labels, all arms, uniform harness.
+#     The free-generation verdicts of run 2 stand as reported and are not overwritten: they are
+#     the free-harness result and are cited as such.
+#   - THE 0.95 STRICT-PARSE FLOOR STILL APPLIES. Guided decoding should make it unreachable, but
+#     an arm that somehow lands below it is still excluded, and truncation at max_tokens is the
+#     one way it can happen - the permissive regex forbids stopping early but not running out of
+#     budget. max_tokens stays 1024 and the truncation count is reported per arm.
+#   - RUN 2's SINGLE MOST INTERESTING NUMBER IS NOW TESTABLE. llama-3.1-8b's surviving free
+#     labels gave fp 0.0347 (A) and 0.0164 (C) with 15/30 and 7/30 usable topics, better than
+#     any judge measured in this project including Opus 4.5 - on a 54%/67% subset whose
+#     selection mechanism was unmeasurable. The guided run either reproduces that on the full
+#     2,025 pairs or refutes it. It is registered here as an OPEN QUESTION with no predicted
+#     direction, and whichever way it comes out is reported.
+#   - llama-3.2-1B and llama-3.2-3B were not run in run 2. Without them the llama ladder has one
+#     point and H-X1 stays unevaluable however good the harness is, so they are part of this run.
+#
+# LOGGING FIX, registered because it is why llama could not be diagnosed in run 2: raw is stored
+# as the first 200 AND last 200 characters of the completion rather than the head alone. 100% of
+# llama's free failures hit the 200-character cap, so whether a score line followed its reasoning
+# was unknowable.

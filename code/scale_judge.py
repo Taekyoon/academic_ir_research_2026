@@ -88,14 +88,40 @@ PARAMS = {"qwen3-1.7b": 2_031_739_904, "qwen3-4b": 4_022_468_096,
           "gemma-3-1b-it": 999_885_952, "gemma-3-4b-it": 4_300_079_472,
           "gemma-3-12b-it": 12_187_325_040, "gemma-3-27b-it": 27_432_406_640}
 
-# Guided decoding target: the protocol's output contract is a single line. The regex is the same
-# shape the strict parser accepts, so a guided run cannot produce a string the parser rejects.
-GUIDED_REGEX = r"## final score: [0-3]"
+# Guided decoding targets. TWO flavours, and the difference is not cosmetic.
+#
+#   PERMISSIVE (default, --guided): any text, then the score line. Constrained decoding only
+#   allows the end-of-sequence token when the automaton is in an accepting state, so the model
+#   CANNOT stop before emitting a valid score line - but it may reason first. This changes the
+#   output CONTRACT and nothing else, which is what a harness remedy should do.
+#
+#   STRICT (--guided-strict): the score line and nothing else. This also deletes the model's
+#   reasoning. For an arm that emits 235 tokens of chain-of-thought before answering, that is a
+#   change to the computation, not to the format, and its labels are not comparable to a free
+#   run of the same model. Kept as a declared secondary probe, never as the primary remedy.
+#
+# Both are shapes the strict parser accepts, so a guided run cannot produce a string the parser
+# rejects. Inline flags are avoided because the FSM backends do not all support them.
+GUIDED_REGEX = r"[\s\S]*## final score: [0-3]"
+GUIDED_REGEX_STRICT = r"## final score: [0-3]"
 
 # Approximate bf16 weight footprint in GB, from published parameter counts. Used only to refuse
 # an arm that cannot fit, so an over-estimate is the safe direction.
 WEIGHT_GB = {k: round(v * 2 / 2**30, 1) for k, v in PARAMS.items()}
 
+
+
+def _clip(text, head=200, tail=200):
+    """Store the HEAD and the TAIL of a failed completion, not the head alone.
+
+    In run 2 every one of llama-3.1-8b's 932 free-generation failures hit a 200-character head
+    cap, so whether a score line followed its 235 tokens of reasoning was unknowable from the
+    log. A verbose model puts the thing you need to see at the end.
+    """
+    t = text or ""
+    if len(t) <= head + tail:
+        return t
+    return t[:head] + f" ...[{len(t) - head - tail} chars omitted]... " + t[-tail:]
 
 def build_prompts(panel_csv, abstracts_jsonl, topics_json, prompt_txt, criteria_txt, condition,
                   limit=None):
@@ -181,9 +207,12 @@ def main():
     ap.add_argument("--dtype", default="bfloat16", choices=("bfloat16",),
                     help="bf16 only, fixed by scale_prereg.py")
     ap.add_argument("--guided", action="store_true",
-                    help="constrain output to the score line. Per R2 this is a DIFFERENT "
-                         "harness and must be declared; use only when free generation fell "
-                         "below the registered strict-parse floor.")
+                    help="PERMISSIVE guided decoding: any text, then the score line. Per R2 this "
+                         "is a DIFFERENT harness and is recorded as such in the manifest.")
+    ap.add_argument("--guided-strict", action="store_true",
+                    help="STRICT guided decoding: the score line only, no reasoning. This "
+                         "changes the computation for a model that reasons before answering; "
+                         "declared secondary probe, not the primary remedy.")
     ap.add_argument("--panel", default="data/panel_sample.csv")
     ap.add_argument("--abstracts", default="clef_abstracts.jsonl")
     ap.add_argument("--topics", default="data/clef_topics.json")
@@ -198,7 +227,10 @@ def main():
     args = ap.parse_args()
 
     repo = ARMS[args.arm]
-    tag = f"{args.arm}_{args.condition}" + ("_guided" if args.guided else "")
+    if args.guided and args.guided_strict:
+        raise SystemExit("--guided and --guided-strict are different harnesses; pick one")
+    suffix = "_guided" if args.guided else ("_guidedstrict" if args.guided_strict else "")
+    tag = f"{args.arm}_{args.condition}{suffix}"
     os.makedirs(args.outdir, exist_ok=True)
     out_path = os.path.join(args.outdir, f"scale_labels_{tag}.jsonl")
     man_path = os.path.join(args.outdir, f"scale_manifest_{tag}.json")
@@ -253,15 +285,17 @@ def main():
               gpu_memory_utilization=args.gpu_memory_utilization)
 
     sp_kwargs = dict(temperature=TEMPERATURE, top_p=TOP_P, max_tokens=MAX_TOKENS, seed=SEED)
-    if args.guided:
+    if args.guided or args.guided_strict:
         # vLLM moved guided decoding between versions; try the current field, fall back to the
         # older one, and refuse rather than run unconstrained if neither exists.
         try:
             from vllm.sampling_params import GuidedDecodingParams
-            sp_kwargs["guided_decoding"] = GuidedDecodingParams(regex=GUIDED_REGEX)
+            sp_kwargs["guided_decoding"] = GuidedDecodingParams(
+                regex=GUIDED_REGEX_STRICT if args.guided_strict else GUIDED_REGEX)
         except Exception:
             try:
-                sp_kwargs["guided_regex"] = GUIDED_REGEX
+                sp_kwargs["guided_regex"] = (GUIDED_REGEX_STRICT if args.guided_strict
+                                             else GUIDED_REGEX)
             except Exception:
                 raise SystemExit("--guided requested but this vLLM exposes no guided decoding "
                                  "API; refusing to fall back to free generation silently")
@@ -290,12 +324,14 @@ def main():
                 topic=r["topic"], pmid=r["pmid"], label=label,
                 in_tokens=len(o.prompt_token_ids), out_tokens=len(gen.token_ids),
                 finish_reason=gen.finish_reason, title_only=r["title_only"],
-                raw=(gen.text or "")[:200] if label is None else None)) + "\n")
+                raw=_clip(gen.text) if label is None else None)) + "\n")
 
     strict_rate = n_strict / len(rows)
     manifest = dict(
         arm=args.arm, family=family, params=PARAMS.get(args.arm),
         condition=args.condition, guided=bool(args.guided),
+        guided_strict=bool(args.guided_strict),
+        harness=("guided" if args.guided else "guided_strict" if args.guided_strict else "free"),
         hf_repo=repo, hf_revision=resolve_revision(repo), dtype=args.dtype,
         quantisation="none",
         thinking_disabled=bool(is_qwen3),
