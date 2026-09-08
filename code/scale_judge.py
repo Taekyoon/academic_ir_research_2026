@@ -201,8 +201,10 @@ def main():
             f"  Per the pre-registration this arm is NOT RUN and is reported as not attempted. "
             f"Do NOT quantise it to make it fit - that would mix precision with scale.")
 
+    # trust_remote_code is deliberately NOT set: every arm here is natively supported by
+    # transformers, and recent versions warn that the flag is ignored for Auto classes anyway.
     llm = LLM(model=repo, dtype=args.dtype, seed=SEED, max_model_len=args.max_model_len,
-              gpu_memory_utilization=args.gpu_memory_utilization, trust_remote_code=True)
+              gpu_memory_utilization=args.gpu_memory_utilization)
 
     sp_kwargs = dict(temperature=TEMPERATURE, top_p=TOP_P, max_tokens=MAX_TOKENS, seed=SEED)
     if args.guided:
@@ -261,6 +263,11 @@ def main():
         gpu=torch.cuda.get_device_name(0) if torch.cuda.is_available() else "cpu",
         torch=torch.__version__, python=platform.python_version(),
         vllm=__import__("vllm").__version__,
+        # transformers version is load-bearing, not incidental: vLLM 0.11.0 declares
+        # transformers>=4.55.2 with no upper bound, and transformers 5.x removed
+        # Tokenizer.all_special_tokens_extended, which vLLM 0.11.0 calls. A run whose
+        # transformers major version is not recorded cannot be reproduced.
+        transformers=__import__("transformers").__version__,
         limit_applied=args.limit)
     json.dump(manifest, open(man_path, "w"), indent=1)
 
