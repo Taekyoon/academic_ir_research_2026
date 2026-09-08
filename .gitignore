@@ -1,0 +1,8 @@
+clef_abstracts.jsonl
+passages.jsonl
+smoke/
+*.zip
+__pycache__/
+.ipynb_checkpoints/
+data/clef/
+data/trec_rag/
