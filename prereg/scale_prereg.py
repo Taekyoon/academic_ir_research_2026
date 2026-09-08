@@ -177,3 +177,91 @@ TOP_P = 1.0
 MAX_TOKENS = 1024
 SEED = 20260908
 N_PAIRS = 2025
+
+# ============================================================================================
+# AMENDMENT 3 - CROSS-FAMILY LADDERS. Written before any Llama or Gemma label existed. Labels
+# that DID exist at writing time: qwen3-4b and qwen3-8b, conditions A and C, from run 1 on an
+# L4 (scale_run1_ko.md). No label from any other family or size existed.
+#
+# WHY. Run 1 could not evaluate H-S1 or H-S2 at all: the L4 admitted only two dense sizes and
+# one of them (4B) fell below the registered strict-parse floor, leaving ONE clean point. But
+# the deeper problem is that a single-family ladder cannot answer the question it was built for.
+# If the Qwen3 ladder shows a trend, a reviewer can say it is a Qwen property. Reproducibility
+# of a SCALE trend means the trend recurs when the pretraining data, tokenizer and post-training
+# recipe all change - i.e. across families. So the design becomes three ladders, not one.
+#
+# ARMS. Every size whose bf16 weights fit the device, per family. Parameter counts are the
+# safetensors totals reported by the HuggingFace API, not estimates:
+#
+#   qwen3   Qwen3-1.7B (2.03B, 3.8 GB)   Qwen3-4B (4.02B, 7.5 GB)
+#           Qwen3-8B (8.19B, 15.3 GB)    Qwen3-14B (14.77B, 27.5 GB)
+#           Qwen3-32B (32.76B, 61.0 GB - 80 GB device only)
+#   llama   Llama-3.2-1B-Instruct (1.24B, 2.3 GB)   Llama-3.2-3B-Instruct (3.21B, 6.0 GB)
+#           Llama-3.1-8B-Instruct (8.03B, 15.0 GB)
+#           (Llama-3.3-70B is 131.4 GB in bf16 and is out of reach on any single A100.)
+#   gemma   gemma-3-1b-it (1.00B, 1.9 GB)   gemma-3-4b-it (4.30B, 8.0 GB)
+#           gemma-3-12b-it (12.19B, 22.7 GB)
+#           gemma-3-27b-it (27.43B, 51.1 GB - 80 GB device only)
+#
+# On a 40 GB A100 that is 4 + 3 + 3 = 10 arms, spans 7.3x / 6.5x / 12.2x. On 80 GB it is 12.
+# Conditions A and C as before, same frozen 2,025-pair panel, so 40,500 or 48,600 judgements.
+#
+# --------------------------------------------------------------------------------------------
+# H-S1 IS RESTATED PER FAMILY. Youden J = se - fp is tested for monotonicity WITHIN each family
+# separately, and the verdict is reported per family with its point count. A family with fewer
+# than three clean points is reported as "not testable", not merged with another family to reach
+# three. The registered gate on H-S2's projection now reads: the projection may be reported only
+# for a family whose own J is monotone.
+#
+# H-X1  DOES THE SCALE TREND REPLICATE ACROSS FAMILIES?  (the new primary question)
+#
+# For each family fit log(fp) ~ log(parameters) over its clean arms and take the slope b_fam.
+# The slope is the quantity that is comparable across families; the intercept is not, because
+# families differ in absolute calibration for reasons that have nothing to do with scale.
+#     all three slopes negative AND the ratio max|b|/min|b| <= 3
+#         -> "TREND REPLICATES": improvement with scale is a property of scale, not of a family.
+#     any slope non-negative, or the ratio > 3
+#         -> "TREND IS FAMILY-DEPENDENT": scale does not have a family-independent effect on the
+#            judge's false-positive rate, and no single scaling statement may be made. This is
+#            the outcome that would force the paper to drop scale as an axis entirely, and it is
+#            registered with the same weight.
+# Reported with the fit quality per family and the point count. Three or four points is a weak
+# fit and the slope is reported with its standard error; it is never presented as a law.
+#
+# H-X2  DOES THE GATE VERDICT AGREE ACROSS FAMILIES AT COMPARABLE SCALE?
+#
+# At the ~8B band (Qwen3-8B, Llama-3.1-8B) and the ~4B band (Qwen3-4B, Llama-3.2-3B,
+# gemma-3-4b-it), compare usable topics out of 30.
+#     the band spread in usable topics is <= 2 -> "SCALE DOMINATES FAMILY at that band"
+#     >= 6                                     -> "FAMILY DOMINATES SCALE at that band", and the
+#                                                 cross-family comparison, not the ladder, is
+#                                                 what the paper should report.
+# Bands are named here, before any label exists, so a band cannot be chosen afterwards to suit
+# the result. gemma has no 8B release, so the ~8B band has two members and that is stated with
+# the number rather than filled by substituting gemma-3-12b-it.
+#
+# --------------------------------------------------------------------------------------------
+# DISCLOSED, in addition to everything above
+#
+#   - LLAMA AND GEMMA ARE GATED WITH MANUAL APPROVAL ("gated": "manual" on the HuggingFace API),
+#     not merely token-gated. The licences must be accepted per model on the model page with the
+#     account that owns the token. A family that cannot be downloaded is reported as NOT
+#     ATTEMPTED, exactly as 14B and 32B were in run 1.
+#   - THE GEMMA LADDER MIXES ARCHITECTURES. gemma-3-1b-it is Gemma3ForCausalLM while
+#     gemma-3-4b-it and gemma-3-12b-it are Gemma3ForConditionalGeneration, i.e. the larger two
+#     are multimodal checkpoints used here on text only. That is a within-family confound
+#     between scale and architecture which this design does NOT resolve, and any gemma slope is
+#     reported carrying it. It is disclosed now rather than discovered in the fit.
+#   - SIZES ARE NOT ALIGNED ACROSS FAMILIES and are not forced to be. H-X1 compares slopes,
+#     which does not require matched sizes; H-X2 compares two named bands and states their
+#     membership. No family's ladder is re-banded after the fact to improve alignment.
+#   - RUN 1 LABELS ARE REUSED for qwen3-4b and qwen3-8b under conditions A and C. They were
+#     produced by the same script, prompts and pinned decoding, so they are the same harness -
+#     but the transformers version differs from run 1 (run 1 predates the 4.57.6 pin), and that
+#     is recorded per arm in the manifests. If qwen3-8b is re-run here, free-generation labels
+#     from both runs are compared and the exact-grade agreement is reported as a harness check.
+#   - THE 4B PARSE FAILURE FROM RUN 1 IS NOT CARRIED OVER. Any arm below the 0.95 strict floor is
+#     excluded from every verdict here too, and R2's guided remedy applies unchanged.
+#   - DOWNLOAD VOLUME is about 110 GB of weights on a 40 GB device and 222 GB on 80 GB. This is
+#     an operational cost, not a scientific one, but a session that dies part-way must report
+#     which arms completed rather than presenting a partial ladder as the registered design.

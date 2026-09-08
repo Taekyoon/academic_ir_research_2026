@@ -57,12 +57,36 @@ STRICT = re.compile(r"##\s*final\s*score\s*:?\s*([0-3])", re.I)
 # rather than pinned here, because pinning a sha we have never resolved would be a claim we
 # cannot support. The manifest is what makes a run reproducible.
 ARMS = {
+    # qwen3 - not gated. Parameter counts are safetensors totals from the HuggingFace API.
+    "qwen3-1.7b":             "Qwen/Qwen3-1.7B",
     "qwen3-4b":               "Qwen/Qwen3-4B",
     "qwen3-8b":               "Qwen/Qwen3-8B",
     "qwen3-14b":              "Qwen/Qwen3-14B",
     "qwen3-32b":              "Qwen/Qwen3-32B",
+    # llama - gated with MANUAL approval; accept the licence on each model page first.
+    "llama-3.2-1b-instruct":  "meta-llama/Llama-3.2-1B-Instruct",
+    "llama-3.2-3b-instruct":  "meta-llama/Llama-3.2-3B-Instruct",
     "llama-3.1-8b-instruct":  "meta-llama/Llama-3.1-8B-Instruct",
+    # gemma - gated with MANUAL approval. NOTE the architecture change within the ladder:
+    # gemma-3-1b-it is Gemma3ForCausalLM while 4b and 12b are Gemma3ForConditionalGeneration,
+    # i.e. multimodal checkpoints used here on text only. Disclosed in the pre-registration as a
+    # within-family confound between scale and architecture that this design does not resolve.
+    "gemma-3-1b-it":          "google/gemma-3-1b-it",
+    "gemma-3-4b-it":          "google/gemma-3-4b-it",
+    "gemma-3-12b-it":         "google/gemma-3-12b-it",
+    "gemma-3-27b-it":         "google/gemma-3-27b-it",
 }
+
+FAMILY = {"qwen3": "qwen3", "llama": "llama", "gemma": "gemma"}
+
+# safetensors parameter totals from the HuggingFace API, used for the log(params) fits
+PARAMS = {"qwen3-1.7b": 2_031_739_904, "qwen3-4b": 4_022_468_096,
+          "qwen3-8b": 8_190_735_360, "qwen3-14b": 14_768_307_200,
+          "qwen3-32b": 32_762_123_264,
+          "llama-3.2-1b-instruct": 1_235_814_400, "llama-3.2-3b-instruct": 3_212_749_824,
+          "llama-3.1-8b-instruct": 8_030_261_248,
+          "gemma-3-1b-it": 999_885_952, "gemma-3-4b-it": 4_300_079_472,
+          "gemma-3-12b-it": 12_187_325_040, "gemma-3-27b-it": 27_432_406_640}
 
 # Guided decoding target: the protocol's output contract is a single line. The regex is the same
 # shape the strict parser accepts, so a guided run cannot produce a string the parser rejects.
@@ -70,8 +94,7 @@ GUIDED_REGEX = r"## final score: [0-3]"
 
 # Approximate bf16 weight footprint in GB, from published parameter counts. Used only to refuse
 # an arm that cannot fit, so an over-estimate is the safe direction.
-WEIGHT_GB = {"qwen3-4b": 8.0, "qwen3-8b": 16.4, "qwen3-14b": 29.6, "qwen3-32b": 65.6,
-             "llama-3.1-8b-instruct": 16.1}
+WEIGHT_GB = {k: round(v * 2 / 2**30, 1) for k, v in PARAMS.items()}
 
 
 def build_prompts(panel_csv, abstracts_jsonl, topics_json, prompt_txt, criteria_txt, condition,
@@ -189,6 +212,7 @@ def main():
     import torch
 
     is_qwen3 = args.arm.startswith("qwen3")
+    family = next((f for f in FAMILY if args.arm.startswith(f)), "unknown")
     # Refuse loudly rather than let vLLM OOM halfway through a 2,025-row run.
     need_gb = WEIGHT_GB[args.arm]
     have_gb = (torch.cuda.get_device_properties(0).total_memory / 2**30
@@ -253,7 +277,8 @@ def main():
 
     strict_rate = n_strict / len(rows)
     manifest = dict(
-        arm=args.arm, condition=args.condition, guided=bool(args.guided),
+        arm=args.arm, family=family, params=PARAMS.get(args.arm),
+        condition=args.condition, guided=bool(args.guided),
         hf_repo=repo, hf_revision=resolve_revision(repo), dtype=args.dtype,
         quantisation="none",
         thinking_disabled=bool(is_qwen3),
