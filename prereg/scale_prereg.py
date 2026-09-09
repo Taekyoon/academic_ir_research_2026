@@ -457,11 +457,30 @@ N_PAIRS = 2025
 # UNIFORMITY measurement, reported with every verdict but not itself disqualifying.
 #
 # Disclosed so the choice can be checked rather than taken on trust: I set this criterion AFTER
-# seeing that gemma-3-12b-it's single non-binding row is a parse failure, and under the
-# zero-tolerance-on-any-row version that arm-condition would be excluded and the guided set would
-# be 7 arm-conditions over 3 Qwen3 sizes instead of 8 over 4 arms. Both readings are reported in
-# the results brief. What is NOT permitted is choosing per arm: the criterion applies to every
-# arm in every family from here on.
+# seeing that gemma-3-12b-it's single non-binding row is a parse failure. The two criteria differ
+# by ONE arm-condition:
+#
+#     A  any non-binding row excludes the arm-condition -> 7 arm-conditions, 4 arms, 2 families,
+#        3 arms clean in BOTH conditions (the three Qwen3 sizes)
+#     B  only a non-binding LABEL excludes it           -> 8 arm-conditions, 4 arms, 2 families,
+#        4 arms clean in both conditions
+#
+# The difference is gemma-3-12b-it condition A alone. That arm's condition C has zero non-binding
+# rows and survives criterion A as well, so NO LINEAGE IS LOST either way. What criterion A costs
+# is that arm's both-conditions pairing - and H-S1 needs three sizes per family, so gemma is
+# unevaluable at one size under either criterion.
+#
+# A correction is recorded here rather than quietly fixed. The first version of this amendment
+# said criterion A would leave "7 arm-conditions over 3 Qwen3 sizes instead of 8 over 4 arms",
+# i.e. that the gemma lineage drops out entirely. It does not. The computation printed the
+# surviving arm list and it contains gemma-3-12b-it; the sentence I wrote two lines later
+# contradicted its own output. The stakes of choosing criterion B post hoc are therefore ONE
+# arm-condition, materially smaller than this amendment originally claimed - which weakens rather
+# than strengthens the case for having chosen it after seeing the data, and is exactly why the
+# overstatement is worth recording instead of being edited away.
+#
+# What is NOT permitted is choosing per arm: the criterion applies to every arm in every family
+# from here on.
 #
 # A CONSEQUENCE THAT MUST TRAVEL WITH THE SECOND RUN'S NUMBERS. Labelled rows do not store their
 # raw text, so for the second guided run n_nonbinding_labelled can only be bounded from the
