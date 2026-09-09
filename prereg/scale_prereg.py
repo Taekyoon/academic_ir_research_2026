@@ -378,3 +378,58 @@ N_PAIRS = 2025
 # as the first 200 AND last 200 characters of the completion rather than the head alone. 100% of
 # llama's free failures hit the 200-character cap, so whether a score line followed its reasoning
 # was unknowable.
+
+# ============================================================================================
+# AMENDMENT 6 - THE SAME-RUN RULE. Set by the user before the guided re-run, and it is a
+# constraint on the ANALYSIS, not on the execution: every comparison must be made among arms
+# that came out of ONE identical execution - same harness, same decoding parameters, same seed,
+# same prompts, same session.
+#
+# WHY IT IS BEING WRITTEN DOWN. The first guided attempt violated it invisibly. The constraint
+# bound on 8 of 16 arm-conditions and not on the other 8, so a table of "the guided run" would
+# have placed constrained and unconstrained arms side by side under one column heading. Nothing
+# in the strict parse rates revealed it; the arms where the constraint did not bind simply looked
+# like the free run, because that is what they were.
+#
+# WHAT THE RULE MAKES VALID, AND WHAT IT INVALIDATES, in the material already in hand:
+#
+#   VALID - run 2, free generation. All 8 arms x 2 conditions went through one harness with the
+#   same seed, prompts and precision in one session. Arms that fell below the 0.95 strict floor
+#   are excluded, but that exclusion is an OBSERVATION MADE WITHIN that harness, not a difference
+#   between harnesses. So the run-2 verdicts stand under this rule and need no re-run:
+#       H-S1 qwen3 MONOTONE on 1.7B / 8B / 14B in both conditions;
+#       the decomposition that J rises because sensitivity rises (+0.230 in A) while the
+#       false-positive rate is flat or rising (+0.076 in A, -0.015 in C);
+#       usable topics flat at 1 -> 1 and 4 -> 2 of 30.
+#
+#   INVALID - the guided attempt. Not one execution in the sense this rule requires, so no
+#   verdict may be read off it. Its only surviving use is diagnostic: which arms the constraint
+#   bound on, and the H-H1 numbers on the three arms where it did bind - and those are explicitly
+#   labelled as a cross-harness measurement, which is what H-H1 is for.
+#
+# CONSEQUENCES FOR THE RE-RUN, registered now:
+#
+#   1. THE ENFORCEMENT PROBE DECIDES MEMBERSHIP, NOT THE PARSE RATE. An arm whose probe fails is
+#      not in the guided comparison set at all. It is reported as "constraint did not bind" and
+#      is NOT back-filled with free-generation labels, because that would rebuild the very mixed
+#      basis this rule exists to forbid.
+#   2. A REDUCED SET IS REPORTED AS REDUCED. If the probe passes on only some arms, the guided
+#      verdicts are stated over exactly those arms with the count, and the free-generation
+#      verdicts of run 2 remain the result for the full set. The two are never merged into one
+#      table.
+#   3. ONE SESSION PER COMPARISON SET where the disk allows it. Running families in separate
+#      sessions is permitted because the harness is fixed in code and pinned in the manifest, but
+#      the manifest fields that define the execution - harness, dtype, seed, temperature,
+#      max_tokens, transformers version, GPU - are checked for equality across every arm in a
+#      comparison set before any verdict is computed, and an inequality voids the set.
+#   4. H-H1 IS RE-MEASURED. The corrected target ##[ ]?final score: [0-3] accepts the model's
+#      natural output, so the constraint now reaches the decision rather than becoming
+#      unsatisfiable after it. The earlier BOUNDED reading was obtained under a constraint that
+#      never touched the decision and does not transfer.
+#
+# COST, from run 2's measured throughput: 19 minutes of GPU for the 8 existing arms at free-run
+# speed, plus llama-3.2-1B and llama-3.2-3B. The corrected regex should remove the token burn
+# entirely - the model can now satisfy the automaton with the output it would have produced
+# anyway - so guided throughput is EXPECTED to return to free-run levels. That expectation is
+# checked against the manifest, not assumed: if rows_per_second is still an order of magnitude
+# below run 2, the constraint is still fighting the model and the run is stopped.

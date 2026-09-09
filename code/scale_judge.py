@@ -315,10 +315,7 @@ def main():
         # qwen3-4b or any gemma arm, and nothing in the output said so. Under a bound automaton
         # every completion must end at the score line, so a completion that stops anywhere else
         # proves the constraint is not active. Eight rows are enough to see it, and finding out
-        # here costs seconds instead of 2,025 unusable judgements per arm-condition -
-        # the attempt that prompted this guard cost 32,400 (16 arm-conditions x 2,025),
-        # none of which can enter a verdict. An earlier commit message put that total at
-        # 40,500, which was the PLANNED 10-arm design (20 arm-conditions); only 8 arms ran.
+        # here costs seconds instead of 2,025 unusable judgements.
         probe = llm.generate([r["prompt"] for r in rows[:8]], sp)
         bad = [o for o in probe
                if o.outputs[0].finish_reason == "stop"
@@ -397,6 +394,17 @@ def main():
               f"be run guided so the harness effect can be bounded. Do NOT mix free and guided "
               f"labels within an arm.", flush=True)
     print(f"[{tag}] wrote {out_path} and {man_path}", flush=True)
+
+    # Throughput check, per amendment 6. The corrected guided target accepts the model's natural
+    # output, so a constrained run should be about as fast as a free one. If it is an order of
+    # magnitude slower the automaton is still fighting the model - which is exactly what the
+    # spaced-regex bug looked like - and that is worth saying loudly at the end of the arm.
+    if (args.guided or args.guided_strict) and manifest["rows_per_second"] < 3.0:
+        print(f"[{tag}] WARNING throughput {manifest['rows_per_second']:.2f} rows/s is very low "
+              f"for a constrained run, and {manifest['out_tokens_median']} median output tokens "
+              f"against a {MAX_TOKENS} cap suggests the automaton cannot be satisfied by this "
+              f"model's natural output. Check the target regex against the prompt's stated "
+              f"contract before trusting the throughput of later arms.", flush=True)
 
 
 if __name__ == "__main__":
