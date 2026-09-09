@@ -102,8 +102,16 @@ PARAMS = {"qwen3-1.7b": 2_031_739_904, "qwen3-4b": 4_022_468_096,
 #
 # Both are shapes the strict parser accepts, so a guided run cannot produce a string the parser
 # rejects. Inline flags are avoided because the FSM backends do not all support them.
-GUIDED_REGEX = r"[\s\S]*## final score: [0-3]"
-GUIDED_REGEX_STRICT = r"## final score: [0-3]"
+#
+# THE SPACE AFTER ## IS OPTIONAL, and that is a bug fix, not a style choice. The first version
+# required "## final score: " with a space while the prompt asks for "##final score:" without
+# one. The strict parser tolerates both, so labels still parsed - but an ENFORCED automaton could
+# never be satisfied by the model's natural output, so every constrained arm emitted its answer
+# and then burned tokens to max_tokens looking for an accepting state. Throughput fell 15-19x
+# (qwen3-14b 19.6 -> 1.01 rows/s) and 100% of those completions were truncated. The guided target
+# must match the contract the prompt states.
+GUIDED_REGEX = r"[\s\S]*##[ ]?final score: [0-3]"
+GUIDED_REGEX_STRICT = r"##[ ]?final score: [0-3]"
 
 # Approximate bf16 weight footprint in GB, from published parameter counts. Used only to refuse
 # an arm that cannot fit, so an over-estimate is the safe direction.
@@ -300,6 +308,29 @@ def main():
                 raise SystemExit("--guided requested but this vLLM exposes no guided decoding "
                                  "API; refusing to fall back to free generation silently")
     sp = SamplingParams(**sp_kwargs)
+
+    if args.guided or args.guided_strict:
+        # PRE-FLIGHT ENFORCEMENT PROBE. Guided decoding failed silently on half the arms of the
+        # first attempt: the constraint bound on qwen3-1.7b/8b/14b and llama-3.1-8b but not on
+        # qwen3-4b or any gemma arm, and nothing in the output said so. Under a bound automaton
+        # every completion must end at the score line, so a completion that stops anywhere else
+        # proves the constraint is not active. Eight rows are enough to see it, and finding out
+        # here costs seconds instead of 2,025 unusable judgements.
+        probe = llm.generate([r["prompt"] for r in rows[:8]], sp)
+        bad = [o for o in probe
+               if o.outputs[0].finish_reason == "stop"
+               and not re.search(r"##[ ]?final score: [0-3]$", (o.outputs[0].text or "").rstrip())]
+        if bad:
+            raise SystemExit(
+                f"[{tag}] GUIDED DECODING IS NOT BINDING on this arm: {len(bad)} of 8 probe rows "
+                f"stopped without ending at the score line, e.g. "
+                f"{(bad[0].outputs[0].text or '')[-90:]!r}\n"
+                f"  Refusing to spend 2,025 judgements on a harness that is not active. Either "
+                f"the backend rejected the regex for this model or it silently ignored it - do "
+                f"NOT fall back to free generation under a --guided label, because the manifest "
+                f"would then record a harness that did not run.")
+        print(f"[{tag}] enforcement probe passed: 8/8 completions end at the score line",
+              flush=True)
 
     tok = llm.get_tokenizer()
     chat_kwargs = dict(tokenize=False, add_generation_prompt=True)
