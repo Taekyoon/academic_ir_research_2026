@@ -100,7 +100,8 @@ the Gemma ladder mixes `Gemma3ForCausalLM` at 1b with `Gemma3ForConditionalGener
 ### Where it stands
 
 **Free generation, one uniform harness, 8 of 10 arms** (Llama-3.2-1B and 3.2-3B not run). Four
-arm-conditions cleared the registered 0.95 strict-parse floor. On the three Qwen3 sizes that did,
+arms cleared the registered 0.95 strict-parse floor in both conditions — 8 arm-conditions of the
+16 that ran: Qwen3-1.7B, Qwen3-8B, Qwen3-14B and gemma-3-12b-it. On the three Qwen3 sizes that did,
 Youden J rises monotonically — and the pass is the finding, because J rises on the back of
 sensitivity (+0.230 in condition A) while the false-positive rate is flat or rising (+0.076 in A,
 −0.015 in C), and the admissibility gate is a condition on the false-positive rate. Usable topics
