@@ -433,3 +433,40 @@ N_PAIRS = 2025
 # anyway - so guided throughput is EXPECTED to return to free-run levels. That expectation is
 # checked against the manifest, not assumed: if rows_per_second is still an order of magnitude
 # below run 2, the constraint is still fighting the model and the run is stopped.
+
+# ============================================================================================
+# AMENDMENT 7 - WHAT MAKES AN ARM INADMISSIBLE UNDER A GUIDED HARNESS. Written after the second
+# guided run's labels existed, and the reason for writing it is a case I had not considered when
+# I set the rule.
+#
+# The first version of the binding check set constraint_binding = (n_nonbinding == 0): a single
+# completion that stopped anywhere but the score line disqualified the arm. On the second guided
+# run gemma-3-12b-it condition A has exactly ONE such row out of 2,025 (0.05%), while qwen3-4b
+# has 544 and 455 (26.9% and 22.5%). A rule with no tolerance treats those identically and drops
+# the only non-Qwen family from the guided set on the strength of one row.
+#
+# THE CRITERION, and it follows from amendment 6 rather than from the numbers: what amendment 6
+# forbids is a comparison over MIXED BASES. A row contaminates a rate only if it produced a
+# LABEL, because se and fp are computed over labelled rows and a parse failure is already
+# excluded by construction. So the quantity that decides admissibility is
+#
+#     n_nonbinding_labelled  - non-binding completions that the strict parser accepted
+#
+# and its threshold is ZERO, with no tolerance: one label from an unconstrained completion is
+# one label from a different harness. n_nonbinding is recorded alongside it as a WITHIN-ARM
+# UNIFORMITY measurement, reported with every verdict but not itself disqualifying.
+#
+# Disclosed so the choice can be checked rather than taken on trust: I set this criterion AFTER
+# seeing that gemma-3-12b-it's single non-binding row is a parse failure, and under the
+# zero-tolerance-on-any-row version that arm-condition would be excluded and the guided set would
+# be 7 arm-conditions over 3 Qwen3 sizes instead of 8 over 4 arms. Both readings are reported in
+# the results brief. What is NOT permitted is choosing per arm: the criterion applies to every
+# arm in every family from here on.
+#
+# A CONSEQUENCE THAT MUST TRAVEL WITH THE SECOND RUN'S NUMBERS. Labelled rows do not store their
+# raw text, so for the second guided run n_nonbinding_labelled can only be bounded from the
+# failure rows, not measured: every non-binding row I can SEE is a parse failure, so no rate is
+# contaminated as far as the stored data shows, but the binding status of the rows that DID parse
+# is unverifiable in that run. The check now runs on the full output at judging time, so runs
+# from this point on have no such blind spot - and the second run's rates are reported with that
+# limitation stated rather than as if the guarantee were complete.

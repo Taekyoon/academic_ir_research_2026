@@ -316,6 +316,13 @@ def main():
         # every completion must end at the score line, so a completion that stops anywhere else
         # proves the constraint is not active. Eight rows are enough to see it, and finding out
         # here costs seconds instead of 2,025 unusable judgements.
+        # The probe is a CHEAP EARLY ABORT, not the authoritative check, because it is not the
+        # same computation as the run: vLLM's numerics depend on batch composition, so eight
+        # prompts in a batch of 8 can come out compliant while the same eight in a batch of
+        # 2,025 do not. On qwen3-4b 26.9% of completions ignored the constraint and the first
+        # eight rows of the run contain two of them, so an honest 8-row probe should have
+        # aborted. It did not, and differing batch composition is the only mechanism that
+        # explains it. The check that decides admissibility runs on the FULL output below.
         probe = llm.generate([r["prompt"] for r in rows[:8]], sp)
         bad = [o for o in probe
                if o.outputs[0].finish_reason == "stop"
@@ -357,6 +364,23 @@ def main():
                 finish_reason=gen.finish_reason, title_only=r["title_only"],
                 raw=_clip(gen.text) if label is None else None)) + "\n")
 
+    # AUTHORITATIVE BINDING CHECK, on the real run rather than on a probe batch. Under a
+    # constraint that is actually in force every completion must end at the score line, so one
+    # that finished with 'stop' anywhere else proves the constraint was not applied to it. This
+    # goes in the manifest so the analysis can exclude the arm mechanically: amendment 6 puts a
+    # non-binding arm OUT of the guided comparison set, and that must not depend on someone
+    # reading a warning in a log.
+    n_nonbinding, n_nonbinding_labelled = 0, 0
+    if args.guided or args.guided_strict:
+        _tail = re.compile(r"##[ ]?final score: [0-3]$")
+        for o in outs:
+            g_ = o.outputs[0]
+            if g_.finish_reason != "stop" or _tail.search((g_.text or "").rstrip()):
+                continue
+            n_nonbinding += 1
+            if STRICT.search(g_.text or ""):
+                n_nonbinding_labelled += 1
+
     strict_rate = n_strict / len(rows)
     manifest = dict(
         arm=args.arm, family=family, params=PARAMS.get(args.arm),
@@ -370,6 +394,9 @@ def main():
         binarise_at=BINARISE_AT, max_model_len=args.max_model_len,
         rows=len(rows), strict_parsed=n_strict, nulls=n_null,
         strict_parse_rate=round(strict_rate, 4),
+        constraint_binding=(None if not (args.guided or args.guided_strict)
+                            else n_nonbinding_labelled == 0),
+        n_nonbinding=n_nonbinding, n_nonbinding_labelled=n_nonbinding_labelled,
         abstracts_missing=missing, title_only=sum(r["title_only"] for r in rows),
         out_tokens_median=sorted(len(o.outputs[0].token_ids) for o in outs)[len(outs) // 2],
         out_tokens_max=max(len(o.outputs[0].token_ids) for o in outs),
@@ -399,6 +426,19 @@ def main():
     # output, so a constrained run should be about as fast as a free one. If it is an order of
     # magnitude slower the automaton is still fighting the model - which is exactly what the
     # spaced-regex bug looked like - and that is worth saying loudly at the end of the arm.
+    if n_nonbinding:
+        print(f"[{tag}] constraint did not bind on {n_nonbinding} of {len(rows)} rows "
+              f"({n_nonbinding/len(rows):.1%}); of those, {n_nonbinding_labelled} produced a "
+              f"LABEL.", flush=True)
+        if n_nonbinding_labelled:
+            print(f"[{tag}] CONTAMINATED: {n_nonbinding_labelled} labels came from unconstrained "
+                  f"completions, so this arm's rates mix two harnesses. manifest records "
+                  f"constraint_binding=false and the arm is OUT of the guided comparison set per "
+                  f"amendment 6. Do NOT re-run it unguided to obtain labels.", flush=True)
+        else:
+            print(f"[{tag}] every non-binding completion failed to parse, so no rate uses one - "
+                  f"constraint_binding stays true and the count travels in the manifest.",
+                  flush=True)
     if (args.guided or args.guided_strict) and manifest["rows_per_second"] < 3.0:
         print(f"[{tag}] WARNING throughput {manifest['rows_per_second']:.2f} rows/s is very low "
               f"for a constrained run, and {manifest['out_tokens_median']} median output tokens "
