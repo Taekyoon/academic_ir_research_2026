@@ -143,13 +143,30 @@ def main():
                                  "back to free generation silently")
     sp = SamplingParams(**sp_kwargs)
 
-    n_strict = n_null = n_nonbinding = n_nonbinding_labelled = 0
+    # THE PROMPT IS NOT WHAT build_prompts RETURNS. scale_judge.py applies the model's chat
+    # template to that text and, for qwen3, disables the thinking mode through the template.
+    # The first version of this script imported build_prompts and skipped this step, which was
+    # not a style difference: qwen3-8b then emitted a thinking block on every row and ran to
+    # max_tokens, giving out_tokens median 1024 (= the cap) on 256 of 256 smoke rows, a strict
+    # parse rate of 0.969 against the registered floor of 1.000, and 2.85 rows/s against the
+    # 34.25 measured for this arm on the panel. The file's own docstring records that an
+    # earlier arm in this project was truncated the same way. The setting goes in the manifest
+    # because a run that does not record it cannot be compared with one that does.
+    is_qwen3 = args.arm.startswith("qwen3")
+    tok = llm.get_tokenizer()
+    chat_kwargs = dict(tokenize=False, add_generation_prompt=True)
+    if is_qwen3:
+        chat_kwargs["enable_thinking"] = False
+
+    n_strict = n_null = n_nonbinding = n_nonbinding_labelled = n_truncated = 0
     out_tokens = []
     t0 = time.time()
     with open(out_path, "a") as fh:
         for i in range(0, len(todo), args.batch_size):
             chunk = todo[i:i + args.batch_size]
-            outs = llm.generate([r["prompt"] for r in chunk], sp)
+            texts = [tok.apply_chat_template([{"role": "user", "content": r["prompt"]}],
+                                             **chat_kwargs) for r in chunk]
+            outs = llm.generate(texts, sp)
             for r, o in zip(chunk, outs):
                 g = o.outputs[0]
                 text = g.text or ""
@@ -158,6 +175,12 @@ def main():
                 n_strict += label is not None
                 n_null += label is None
                 out_tokens.append(len(g.token_ids or []))
+                n_truncated += g.finish_reason == "length"
+                # The binding check inspects completions that finished with 'stop'. If every
+                # completion was truncated instead, it inspects nothing and reports binding for
+                # the wrong reason - which is what happened on the first smoke run, where
+                # n_nonbinding was 0 because no completion ever finished. Truncation is counted
+                # separately so the manifest cannot report a vacuous pass.
                 if (args.guided or args.guided_strict) and g.finish_reason == "stop" \
                         and not TAIL.search(text.rstrip()):
                     n_nonbinding += 1
@@ -190,11 +213,26 @@ def main():
         strict_parse_rate=n_strict / max(n_strict + n_null, 1),
         out_tokens_median=med, out_tokens_max=max(out_tokens) if out_tokens else None,
         wall_seconds=round(wall, 1), rows_per_second=round(len(todo) / max(wall, 1e-9), 2),
+        thinking_disabled=bool(is_qwen3),
+        n_truncated=n_truncated, truncation_rate=n_truncated / max(len(out_tokens), 1),
         n_nonbinding=n_nonbinding, n_nonbinding_labelled=n_nonbinding_labelled,
-        constraint_binding=(n_nonbinding == 0),
-        vllm=__import__("vllm").__version__, python=platform.python_version())
+        constraint_binding=(None if n_truncated == len(out_tokens) else n_nonbinding == 0),
+        vllm=__import__("vllm").__version__,
+        # transformers is load-bearing rather than incidental: vLLM 0.11.0 declares
+        # transformers>=4.55.2 with no upper bound and 5.x removes an API it calls, so a run
+        # that does not record the major version cannot be reproduced.
+        transformers=__import__("transformers").__version__,
+        python=platform.python_version())
     json.dump(manifest, open(man_path, "w"), indent=1)
     print(json.dumps(manifest, indent=1), flush=True)
+    if n_truncated:
+        print(f"\n*** {n_truncated:,} of {len(out_tokens):,} completions hit max_tokens "
+              f"({n_truncated / max(len(out_tokens), 1):.1%}). Truncation on this scale is the "
+              f"documented signature of the thinking mode being left on or the chat template "
+              f"not being applied; it collapses throughput and puts the strict parse rate "
+              f"below its floor. constraint_binding is reported as null rather than true when "
+              f"nothing finished with 'stop', because the binding check would otherwise pass "
+              f"by inspecting no completions at all.", flush=True)
     if n_nonbinding:
         print(f"\n*** CONSTRAINT DID NOT BIND on {n_nonbinding:,} completions "
               f"({n_nonbinding_labelled:,} of them produced a label). Amendment 6 puts a "
