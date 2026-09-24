@@ -125,6 +125,33 @@ EXCLUDE_POOL_EXHAUSTED = True
 FULL_POOL_JUDGE = "open-weight, bfloat16, single A100 40GB"
 STRATA_FROM = "judge binary decision"   # NOT panel_sample.csv stratum, which is the expert label
 
+# AMENDMENT 5, fixed BEFORE any H-B6 value exists. Disclosed as an amendment rather than
+# presented as original: the registration fixed H-B6's threshold and its strata (the judge's
+# binary decision, never the expert label) but left the ALLOCATION of the budget between strata
+# free. An allocation left free is a parameter H-B6 could be satisfied by searching, which is
+# the same defect Amendment 4 closed for the band tolerance, so it is fixed here.
+#
+# PRIMARY. Proportional allocation with at least one unit in every non-empty stratum:
+#   n_h = max(1, round(n * N_h / N)) for each non-empty stratum, largest-remainder adjusted to
+#   sum to n, then capped at N_h with any remainder spilled to the other stratum.
+# The minimum of one is not decoration. Under pure proportional allocation the judge-eligible
+# stratum holds about 7 per cent of the pool, so at the small budgets this work is about it
+# draws ZERO units in most topics, the stratified estimator then counts only the other stratum,
+# and what would be measured is an estimator that ignores the stratum stratification exists to
+# reach. That is a property of the allocation rather than of stratification, and reporting it as
+# the H-B6 verdict would test the wrong thing.
+#
+# SECONDARY, reported in the sensitivity grid and never substituted for the primary:
+#   pure proportional (no minimum), and Neyman allocation n_h proportional to N_h * s_h with
+#   s_h the within-stratum standard deviation of the JUDGE's label - never of the expert label,
+#   which would be allocating on the answer.
+# A verdict that holds only under some allocations is reported as CONDITIONAL ON ALLOCATION and
+# may not be described as support, exactly as a tolerance-dependent band verdict may not.
+HB6_ALLOCATION          = "proportional_min1"
+HB6_ALLOCATION_GRID     = ("proportional_min1", "proportional", "neyman_judge")
+HB6_GRID_REPORT_REQUIRED = True
+HB6_STRATA_FROM         = "judge_binary"   # never the expert label
+
 # ---------------------------------------------------------------- H-B6
 
 # Stratification beats SRSWOR at equal human budget.
