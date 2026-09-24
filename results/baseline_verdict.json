@@ -1,0 +1,159 @@
+{
+ "_what_this_file_is": "Registered reporting obligation 1: every verdict echoes the threshold it was tested against. Values are transcribed from the saved result tables named in each entry; nothing here is newly computed.",
+ "_registration": "prereg/baseline_prereg.py v9 (Amendments 2-6)",
+ "_closure_ruling": "closure_ruling_en.md",
+ "_judge_arms_in_play": {
+  "pool_wide_labels": "qwen3-8b, condition C, permissive guided decoding, bfloat16",
+  "band_assignment": "(BAND_ARM = haiku_A, condition A, BAND_TOLERANCE = 0.5)",
+  "registered_JUDGE_LABELS": "gpt-4o-mini, condition A (stratified sample, not a census)",
+  "note": "Reporting obligation 11: the board mixes three arms, so no statement of the form 'the judge does X' may appear unqualified."
+ },
+ "verdicts": [
+  {
+   "object": "H-BAND (band selection, primary)",
+   "verdict": "WITHDRAWN as a registration defect found by audit. No map from band to procedure was registered - not in baseline_prereg.py and not in experiment_plan_en.md - so BANDED was never a determinate object; BEST_FIXED cannot be identified, because two of the nine board procedures have no median RMSE at any budget; and the registered comparison does not state whether a band assigned a zero-budget procedure spends nothing or spends n. H-BAND is therefore neither supported nor falsified. The selection rule is not advanced as a contribution and the band table is reported as description only, at the registered instantiation (haiku_A, t = 0.5) giving 4 / 18 / 8.",
+   "threshold_as_registered": "RMSE no greater than 0.90 x BEST_FIXED at >= 4 of the 6 registered budgets",
+   "requires_further_measurement": false,
+   "surrendered": "The paper's primary constructive claim, and with it any statement that band selection works, does not work, or was tested. Also the FALSIFIED branch's first consequence clause ('the paper's constructive claim reduces to \"nothing beats random sampling\"'), which did not fire and is contradicted by section 6."
+  },
+  {
+   "object": "H-B6 (stratification, subsidiary)",
+   "verdict": "NOT SUPPORTED. 'Stratification beats SRSWOR at equal human budget' is scored on 'median RMSE of B6 <= 0.90 * median RMSE of B3, at the same n. SUPPORTED if that holds at >= 4 of the 6 grid points.' It holds at 1 of 6 under the registered primary allocation (proportional_min1), against the 4 required; at 2 of 6 under pure proportional and 1 of 6 under Neyman on the judge's label, so the verdict is not conditional on allocation within the registered grid. Strata were the judge's binary decision, never the expert label, and the comparator was computed in the same run. Re-scoring against the anchoring run's realisation of the same registered comparator moves the counts to 0, 1 and 1 of 6 - further from support.",
+   "threshold_as_registered": "median RMSE of B6 <= 0.90 x median RMSE of B3 at >= 4 of the 6 grid points",
+   "requires_further_measurement": false,
+   "surrendered": "The absolute-scaling counterpart; the graded four-level strata variant the registration excludes; any allocation outside the registered grid, which Amendment 5 forbids choosing after these values; and any claim that no allocation could reach the margin - board_stratified_en.md section 3 corrects its own first statement of this and the correction must travel.",
+   "allocation_counts": {
+    "proportional_min1": 1,
+    "proportional": 2,
+    "neyman_judge": 1
+   },
+   "note": "pure proportional reaches 2 of 6, i.e. PARTIAL on its own, and still below the registered 4; the verdict is NOT SUPPORTED and not conditional on allocation"
+  },
+  {
+   "object": "H-B7 (depth-partitioned pooling, subsidiary)",
+   "verdict": "NOT ATTEMPTED. No verdict. 'Hybrid pooling with a DEPTH split beats SRSWOR at equal human budget' was not run: the participant runs are not in the workspace and the SIGIR 2026 full text is unread. The registration provides no not-run branch for H-B7, so no consequence of its failure may be reported. Nothing is claimed about depth-partitioned hybrid pooling in either direction, and the registered fidelity disclosure - 'full text unread; reimplementation from summary' - attaches to the plan's description of the procedure rather than to any result.",
+   "threshold_as_registered": "same threshold, HB7_RATIO = 0.90, HB7_MIN_GRIDPOINTS = 4",
+   "requires_further_measurement": false,
+   "surrendered": "The comparison against the nearest competing proposal as an implemented system, which section 3 states the board requires; any sentence of the form 'the nearest competing proposal is reproduced without advantage'; and the Appendix B failure-consequence row, which may not be reported."
+  },
+  {
+   "object": "H-B8 (adaptive selection, optional subsidiary)",
+   "verdict": "NOT ATTEMPTED, recorded as such in baseline_verdict.json as the registration requires: 'If it is not run, baseline_verdict.json records \"NOT ATTEMPTED\" and no claim about it may appear anywhere.' No claim about adaptive selection appears anywhere in the paper, including that it is untested in a way that implies a result.",
+   "threshold_as_registered": "HB8_RATIO = 0.90 at HB8_MIN_GRIDPOINTS = 4; optional procedure",
+   "requires_further_measurement": false,
+   "surrendered": "Nothing the registration promised - it anticipated exactly this closure."
+  },
+  {
+   "object": "Null hypothesis (experiment_plan_en.md section 1 only)",
+   "verdict": "MEASURED AGAINST; NOT CLOSED AS A REGISTERED VERDICT. 'No procedure attains a lower RMSE than simple random sampling at equal budget' is improved on as a measurement: the Bayesian estimator at prior weight 50 attains median relative RMSE at most 0.90 times simple random sampling at 6 of the 6 registered budgets, and at prior weight 10 at 5 of 6 in-run (4 of 6 against the anchoring comparator). But baseline_prereg.py registers no null hypothesis, places 'B3 vs B4/B5 - SRSWOR is preferred at every sample size' under 'WHAT THIS FILE DOES NOT REGISTER', and its reporting obligation 4 states that prior results 'are not re-tested and their verdicts are not restated as new findings'. The honest closing form is a prior result overturned on recomputation under the registered metric, disclosed as such, and conditional on a prior weight no registration in the store fixes.",
+   "threshold_as_registered": "no threshold registered in baseline_prereg.py",
+   "requires_further_measurement": false,
+   "surrendered": "The word 'falsifies', which section 6 still uses; the zero-cost-floor comparison as an equal-budget statement, since n = 5 against n = 0 is not equal budget; and the floor-clearing clause as unconditional, since at prior weight 10 the constant is never improved on (minimum 0.6709)."
+  },
+  {
+   "object": "P1 operative clause (the arm that was run)",
+   "verdict": "FALSIFIED, WITH THE DIRECTION REVERSED. 'countable band predicted to fall from 4 topics to 3 or fewer' against an open-weight p* range of 0.1373 to 0.3361: measured pool-wide the boundary is 0.0706 - below the predicted interval and below the registered 0.0902 - and the countable band widens from 4 topics to 5, CD010860 at p = 0.0745 crossing in. Reported as a failed prediction, not deleted, as the registration requires, and the reason is the result: panel non-eligible false-positive rate 0.1292 against 0.0645 outside the panel, one run and one set of labels, run-to-run variation 0.0025.",
+   "threshold_as_registered": "declared prediction, no registered threshold",
+   "requires_further_measurement": false,
+   "surrendered": "Nothing beyond what the falsification itself costs - the prediction's inputs were panel-measured rates, and the same defect is inherited by the registered band instantiation."
+  },
+  {
+   "object": "P1 grid-wide clause (empty for 4 of 8 arm-conditions)",
+   "verdict": "NOT DECIDED. 'empty for 4 of 8 arm-conditions' was never evaluated: only the registered arm was run over the pool, and the other seven arm-conditions in predicted_band_shift.csv still carry panel-measured rates - the measurement basis this same run showed to be biased.",
+   "threshold_as_registered": "declared prediction, no registered threshold",
+   "requires_further_measurement": false,
+   "surrendered": "Any grid-wide statement about open-weight arms and the countable band, including the direction."
+  },
+  {
+   "object": "P2 clause (a) - model-assisted at 0/6",
+   "verdict": "HOLDS. 'GREG met the 0.90 margin at 0/6 budgets': on the pool the model-assisted estimator meets it at 0 of 6 registered budgets, ratios 0.944 / 0.938 / 0.947 / 0.96 / 0.933 / 0.922. Reported as a prior result reproduced under the registered metric, never as a new finding.",
+   "threshold_as_registered": "declared prediction, no registered threshold",
+   "requires_further_measurement": false,
+   "surrendered": "The language of supersession - the plan's 'its model-assisted verdict survives the change' restates a prior verdict and must be reworded."
+  },
+  {
+   "object": "P2 clause (b) - Bayesian at kappa = 10",
+   "verdict": "HOLDS. 'Bayesian kappa=10 at 4/6': on the pool it meets the margin at 5 of 6 registered budgets against the in-run comparator and at 4 of 6 against the anchoring run's realisation of the same registered procedure - at or above the registered 4 on either realisation.",
+   "threshold_as_registered": "declared prediction, no registered threshold",
+   "requires_further_measurement": false,
+   "surrendered": "The word 'strengthens', which restates a prior verdict; the count must be reported with the comparator realisation named, since the two differ."
+  },
+  {
+   "object": "P2 clause (c) - the zero-cost constant",
+   "verdict": "FALSIFIED, AND CLOSED AS CONDITIONAL ON AN UNREGISTERED PRIOR WEIGHT. 'the zero-cost constant is not improved on at any tested budget on the registered scaling': the constant at 0.6304 is improved on from n = 5 by the Bayesian arm at prior weight 50 (0.6270, reaching 0.5130 at a hundred judgments). At prior weight 10 it is never improved on. No registration in the store fixes the prior weight, so this clause is closed as conditional, never as support, on the same principle Amendment 5 states for allocation and the H-BAND clause states for tolerance.",
+   "threshold_as_registered": "declared prediction, no registered threshold",
+   "requires_further_measurement": false,
+   "surrendered": "The floor-clearing result as a headline; it may be reported only with the prior weight named and the bias it buys stated - median relative bias to 0.077 against 0.008 for the random subsample."
+  },
+  {
+   "object": "P2 registered mechanism clause",
+   "verdict": "NOT MEASURED. The registered mechanism is 'median P(no eligible document in the sample) = 0.82 at n = 10 and 0.96 in the sparsest band', and nothing recomputes it on the pool. The judge-derived against judge-free shrinkage-target comparison reported in its place - crossing at n = 30, 20 per cent better below and 6 per cent worse above - is an unregistered substitute quantity, declared as one, and it does not close this clause.",
+   "threshold_as_registered": "declared prediction, no registered threshold",
+   "requires_further_measurement": false,
+   "surrendered": "The mechanism half of P2. This is the one registered clause in the live plan whose registered form could be moved from not-measured to decided by a computation on inputs already in hand - a hypergeometric quantity in N and R over the registered bands, consuming no judgments. If the project elects that computation the clause closes as decided; if not, the substitute must not be presented as the mechanism resolving."
+  },
+  {
+   "object": "n* (registered reported quantity)",
+   "verdict": "REPORTED. n* = 5 on both scalings collection-wide, with per-band n* of 3 (countable), 5 (auxiliary) and 3 (uninformative), each against the judge-only point within that band; at n = 3 the subsample is still above it, 4.185 against 4.126. Reported with the disclosure that the reference point is a projection of stratum rates on 29 of 30 topics and a measured census on only 4, and with the registered fallback string 'not reached at n <= 100' unused because a grid point qualifies.",
+   "threshold_as_registered": "derived reported quantity; no threshold. Reference is the judge-only projection point",
+   "requires_further_measurement": false,
+   "surrendered": "Nothing, once transcribed into baseline_nstar.csv with every band label carrying (haiku_A, t = 0.5).",
+   "band_instantiation": "(BAND_ARM = haiku_A, condition A, BAND_TOLERANCE = 0.5)"
+  },
+  {
+   "object": "Appendix B row 1 - judge-only against the uninformative estimator",
+   "verdict": "CARRIED AS PRIOR, ON ITS OWN METRIC ONLY. Decided on |log error| - 16 of 30 topics, Wilcoxon p = 0.839 - and baseline_prereg.py states '|log error| is NOT used in this experiment. Reporting any registered verdict below on a different error metric voids that verdict.' On the board's registered relative metric the same two procedures read 4.126 against 0.6304, a factor of 6.5, and that comparison is untested. The prior tie and the board figures may not be read together, and the prior verdict may not be restated as a board finding.",
+   "threshold_as_registered": "no threshold; carried as prior on |log error|, the metric the board forbids",
+   "requires_further_measurement": false,
+   "surrendered": "Any joint reading of section 0's 'Established' row with section 6's figures."
+  },
+  {
+   "object": "Appendix B row 2 - the exhaustive judge census",
+   "verdict": "CARRIED AS PRIOR. Identity exact over 54 rows at 1e-6; variance eliminated, bias unchanged. On this board the judge census is an apparatus check on the 4 topics small enough to be censused - the small dense ones - and licenses no collection-wide statement.",
+   "threshold_as_registered": "no threshold; identity check, exact agreement required",
+   "requires_further_measurement": false,
+   "surrendered": "Any collection-wide census claim."
+  },
+  {
+   "object": "Appendix B row 3 - random sampling against the two model-assisted estimators",
+   "verdict": "CARRIED AS PRIOR AND NOT RE-TESTED. The row as it currently stands in v24 - 'superseded by section 6 - on the pool the Bayesian arm is preferred and the model-assisted one is not' - is inadmissible: reporting obligation 4 forbids restating a prior verdict as a new finding, and the docstring places this exact comparison under what the file does not register. The admissible form is that the three sampling estimators were RECOMPUTED under the registered metric, as the same file mandates, and that the recomputation disagrees with the prior result - reported as a recomputation, not as a supersession or a new verdict.",
+   "threshold_as_registered": "no threshold; recomputed under the registered metric (see H-B6 / P2 entries)",
+   "requires_further_measurement": false,
+   "surrendered": "The words 'superseded', 'survives' and 'strengthens' wherever they attach to a prior-result verdict."
+  },
+  {
+   "object": "Section 0 'Established' table - six carried findings",
+   "verdict": "CARRIED AS SETTING, NOT AS VERDICTS OF THIS EXPERIMENT. Each row must name the metric and the collection it was decided on. Row 2, 'The judge does not clear an uninformative estimator', is decided on |log error| and may not be quoted beside section 6's relative-error figures. Rows 3 to 6 are decided under their own registrations at the standing recorded in hypothesis_standing_audit.md and are unchanged by this closure.",
+   "threshold_as_registered": "no threshold; carried as setting, each row naming its own metric and arm",
+   "requires_further_measurement": false,
+   "surrendered": "Nothing, provided each row travels with its metric."
+  },
+  {
+   "object": "Out-of-plan registrations (scope statement)",
+   "verdict": "CLOSED AT THE STANDING RECORDED IN hypothesis_standing_audit.md. The thirteen registrations outside the live board are not objects of this closure and this ruling changes none of their standings. Two carriages into the live board must be disclosed: BAND_AUXILIARY = 0.0088 is inherited from greg_prereg.py's secondary analysis (crossing prevalence 0.008837), and board_estimators.py's estimator definitions are transcribed from the lineage of greg_faithful.csv - a file the plan describes as 'superseded and not carried'.",
+   "threshold_as_registered": "thresholds are those of the thirteen registrations themselves; see hypothesis_standing_audit.md",
+   "requires_further_measurement": false,
+   "surrendered": "Nothing, given the disclosure. The plan cannot both not carry that file and take its estimator definitions from it without saying so."
+  }
+ ],
+ "exclusions": {
+  "EXCLUDE_IF_R_ZERO": {
+   "fired_on_topics": 0,
+   "topics_retained": 30,
+   "minimum_R": 2,
+   "source": "baseline_inputs.csv"
+  },
+  "EXCLUDE_POOL_EXHAUSTED": {
+   "cells_removed": 3,
+   "cells": [
+    "CD008760 at n=75",
+    "CD008760 at n=100",
+    "CD010860 at n=100"
+   ],
+   "source": "baseline_curves.csv (exhausted flag), not the amendment's prose"
+  }
+ },
+ "_scaling": "Every verdict here is on the REGISTERED RELATIVE scaling. No absolute-scaling counterpart exists, and the relative choice was made after both scalings were seen to disagree; the absolute scaling reverses the ordering at the largest budget.",
+ "_band_split_sensitivity": "Wherever the 4 / 18 / 8 split appears it holds only at the registered instantiation (BAND_ARM = haiku_A, condition A, BAND_TOLERANCE = 0.5). Over the 24-point arm-by-tolerance grid in baseline_band_sensitivity.csv the countable boundary p* spans 0.018905 to 0.156463.",
+ "_two_senses_of_registered": "The word 'registered' names two different arms in this record. The registered JUDGE_LABELS arm is gpt-4o-mini condition A, a stratified sample of 4,762 pairs, and it supplies the judge-only reference point and every n*. The arm registered for the pool run is qwen3-8b condition C, and it supplies every auxiliary variable. Where a document says 'the registered arm' in a results context it means the second."
+}

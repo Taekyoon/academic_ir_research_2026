@@ -1,0 +1,2 @@
+file,parse_status,reason,runs_read,min_runs,guard_state
+,stage not attempted,"H-B7 (depth-partitioned hybrid pooling) was not run, so the participant-run loader never executed and no file was accepted or rejected. This row exists because an EMPTY file would, together with fewer than MIN_RUNS = 20 runs read, be an ERROR under the registered harness guard rather than a pass.",0,20,not triggered - stage never entered

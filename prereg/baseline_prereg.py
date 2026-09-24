@@ -152,6 +152,20 @@ HB6_ALLOCATION_GRID     = ("proportional_min1", "proportional", "neyman_judge")
 HB6_GRID_REPORT_REQUIRED = True
 HB6_STRATA_FROM         = "judge_binary"   # never the expert label
 
+# AMENDMENT 6, at closure. Correction of AMENDMENT 2(b)'s stated rationale, not of its content.
+# 2(b) justified adding the two budgets below the inherited grid with the claim that the added
+# points "cannot change a verdict". That is true of WHICH points are counted - the verdict is
+# scored on the six registered budgets and the two added ones are excluded from the count - and
+# FALSE of their VALUES: per-cell seeding changed the draws at every budget, so the six counted
+# points moved when the grid was extended. No verdict moved with them. The pre-amendment values
+# are recorded in baseline_anchor_en.md sections 2 and 5, and in
+# closure_certification_en.md; they are not restated here because this amendment corrects a
+# rationale rather than a value.
+#
+# This amendment corrects a rationale. It does not alter N_GRID, N_GRID_REGISTERED_SUBSET, any
+# threshold, or any verdict, and it is disclosed rather than edited into 2(b) so that the
+# original wording stays readable.
+
 # ---------------------------------------------------------------- H-B6
 
 # Stratification beats SRSWOR at equal human budget.
